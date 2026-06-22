@@ -93,7 +93,8 @@ body{background:#03050f;display:flex;align-items:center;justify-content:center;m
     <input id="ni" type="text" maxlength="12" placeholder="Enter name..." autocomplete="off" spellcheck="false">
     <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
       <button class="obtn" id="bplay">&#9654; PLAY</button>
-      <button class="obtn" id="blb" style="background:rgba(0,50,30,.5);border-color:#0a5030;color:#30c080">RANKING</button>
+      <button class="obtn" id="blb" style="background:rgba(0,50,30,.5);border-color:#0a5030;color:#30c080">LOCAL</button>
+      <button class="obtn" id="blb-global" style="background:rgba(80,40,0,.5);border-color:#c08020;color:#ffd060" onclick="if(window.showGlobalLB)showGlobalLB()">🌍 GLOBAL</button>
     </div>
     <div class="oi">PC: Arrow/WASD=move | Z/Space=Jump | C=Attack | Esc=Pause<br>Mobile: Slide pad left/right | JUMP &amp; HIT buttons</div>
   </div>
@@ -520,6 +521,8 @@ function die(){
     </div>`);
   document.getElementById('brs').onclick=()=>startGame();
   document.getElementById('blb2').onclick=()=>{lbRender(score);document.getElementById('lbp').style.display='block';};
+  // Show Firebase global leaderboard submit
+  setTimeout(()=>{ if(window.showFirebaseSubmit) window.showFirebaseSubmit(score, wNum, mH); }, 600);
 }
 
 function showOv(html){ const ov=document.getElementById('ov'); ov.innerHTML=html; ov.style.display='flex'; }
@@ -759,7 +762,7 @@ document.getElementById('csel').querySelectorAll('.cc').forEach(el=>{
 document.getElementById('blb').addEventListener('click',()=>{ lbRender(0); document.getElementById('lbp').style.display=document.getElementById('lbp').style.display==='none'?'block':'none'; });
 
 // ── START GAME ───────────────────────────────────
-function startGame(){
+window.startGame = function startGame(){
   const v=ni.value.trim(); if(v)pName=v;
   const lb=lbLoad(), be=lb.find(e=>e.name===pName);
   bestScore=be?be.score:0;
@@ -795,5 +798,179 @@ function loop(ts){
 }
 requestAnimationFrame(loop);
 </script>
+
+<style>
+#fb-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;display:none;align-items:center;justify-content:center;}
+#fb-box{background:#0b0e28;border:1px solid #2a4090;border-radius:12px;padding:24px 28px;width:340px;max-width:95vw;font-family:monospace;color:#dff0ff;}
+#fb-box h2{font-size:16px;color:#88ccff;margin-bottom:4px;letter-spacing:2px;}
+#fb-box p{font-size:11px;color:#3a6090;margin-bottom:14px;}
+#fb-name{width:100%;background:#07091a;border:1px solid #2a4090;color:#dff0ff;padding:8px 10px;border-radius:6px;font-size:14px;font-family:monospace;outline:none;margin-bottom:10px;}
+#fb-name:focus{border-color:#5090ff;}
+#fb-submit{width:100%;background:#0f2570;border:1px solid #2040c0;color:#88ccff;padding:9px;border-radius:6px;font-size:13px;cursor:pointer;font-family:monospace;letter-spacing:1px;}
+#fb-submit:active{background:#1a3a9f;}
+#fb-skip{width:100%;background:transparent;border:1px solid #1a3060;color:#3a6090;padding:7px;border-radius:6px;font-size:11px;cursor:pointer;font-family:monospace;margin-top:6px;}
+#fb-score-display{font-size:28px;color:#ffd700;font-weight:700;text-align:center;margin:8px 0 16px;}
+
+#lb-overlay{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:200;display:none;align-items:center;justify-content:center;}
+#lb-box{background:#0b0e28;border:1px solid #2a4090;border-radius:12px;padding:20px 24px;width:360px;max-width:95vw;font-family:monospace;color:#dff0ff;max-height:90vh;overflow-y:auto;}
+#lb-box h2{font-size:16px;color:#ffd700;letter-spacing:2px;margin-bottom:14px;text-align:center;}
+.lb-row{display:flex;align-items:center;gap:8px;padding:5px 8px;border-bottom:1px solid #0f1840;font-size:12px;}
+.lb-row.me{background:rgba(30,60,150,.3);}
+.lb-row.top1{background:rgba(100,70,0,.3);}
+.lb-rank{min-width:24px;color:#3a5080;font-size:11px;}
+.lb-name{flex:1;color:#88b8e8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lb-score{color:#dff0ff;font-weight:500;}
+.lb-world{font-size:10px;color:#3a5080;min-width:40px;text-align:right;}
+.lb-top1 .lb-rank,.lb-top1 .lb-score{color:#ffd700;}
+#lb-close{width:100%;background:#0f2570;border:1px solid #2040c0;color:#88ccff;padding:8px;border-radius:6px;font-size:12px;cursor:pointer;font-family:monospace;margin-top:12px;}
+#lb-status{font-size:11px;color:#3a6090;text-align:center;margin-top:6px;}
+</style>
+
+<!-- Score Submit Overlay -->
+<div id="fb-overlay">
+  <div id="fb-box">
+    <h2>🏆 GAME OVER</h2>
+    <p>Submit your score to the Global Leaderboard</p>
+    <div id="fb-score-display"></div>
+    <input id="fb-name" type="text" maxlength="12" placeholder="Enter your name..." autocomplete="off" spellcheck="false">
+    <button id="fb-submit">🚀 SUBMIT SCORE</button>
+    <button id="fb-skip">Skip — Play Again</button>
+  </div>
+</div>
+
+<!-- Leaderboard Overlay -->
+<div id="lb-overlay">
+  <div id="lb-box">
+    <h2>🌍 GLOBAL RANKING</h2>
+    <div id="lb-rows"><div style="text-align:center;color:#3a6090;padding:20px">Loading...</div></div>
+    <div id="lb-status"></div>
+    <button id="lb-close">✕ CLOSE</button>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAHs9FyxaAt5PPM_b3WGozE_zvbQafsH7I",
+  authDomain: "ice-rush-9984a.firebaseapp.com",
+  projectId: "ice-rush-9984a",
+  storageBucket: "ice-rush-9984a.firebasestorage.app",
+  messagingSenderId: "646876126494",
+  appId: "1:646876126494:web:2eeeacffa508f0fad9bd0f",
+  measurementId: "G-D74HY16X5G"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ── Submit score to Firestore ──
+async function submitScore(name, score, world, height) {
+  try {
+    await addDoc(collection(db, "leaderboard"), {
+      name: name.substring(0,12),
+      score,
+      world,
+      height,
+      ts: serverTimestamp()
+    });
+    return true;
+  } catch(e) {
+    console.error("Submit error:", e);
+    return false;
+  }
+}
+
+// ── Load leaderboard from Firestore ──
+async function loadLeaderboard() {
+  try {
+    const q = query(collection(db, "leaderboard"), orderBy("score","desc"), limit(20));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({id:d.id, ...d.data()}));
+  } catch(e) {
+    console.error("Load error:", e);
+    return [];
+  }
+}
+
+// ── Render leaderboard ──
+async function renderLB(myName, myScore) {
+  const rows = document.getElementById('lb-rows');
+  const status = document.getElementById('lb-status');
+  rows.innerHTML = '<div style="text-align:center;color:#3a6090;padding:20px">Loading...</div>';
+  const data = await loadLeaderboard();
+  if(!data.length){
+    rows.innerHTML = '<div style="text-align:center;color:#3a6090;padding:20px">No scores yet. Be the first!</div>';
+    return;
+  }
+  rows.innerHTML = '';
+  data.forEach((e,i) => {
+    const isMe = e.name===myName && e.score===myScore;
+    const div = document.createElement('div');
+    div.className = 'lb-row' + (i===0?' top1':'') + (isMe?' me':'');
+    div.innerHTML = `<span class="lb-rank">${i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)}</span>
+      <span class="lb-name">${e.name}</span>
+      <span class="lb-score">${(e.score||0).toLocaleString()}</span>
+      <span class="lb-world">W${e.world||1}</span>`;
+    rows.appendChild(div);
+  });
+  const myRank = data.findIndex(e=>e.name===myName&&e.score===myScore)+1;
+  if(myRank>0) status.textContent = `Your rank: #${myRank} of ${data.length}`;
+}
+
+// ── Show submit overlay after game over ──
+window.showFirebaseSubmit = function(score, world, height) {
+  const ov = document.getElementById('fb-overlay');
+  document.getElementById('fb-score-display').textContent = score.toLocaleString() + ' pts';
+  // Pre-fill name if previously used
+  const saved = localStorage.getItem('fb_player_name');
+  if(saved) document.getElementById('fb-name').value = saved;
+  ov.style.display = 'flex';
+
+  document.getElementById('fb-submit').onclick = async function() {
+    const name = document.getElementById('fb-name').value.trim();
+    if(!name){ document.getElementById('fb-name').style.borderColor='#ff4040'; return; }
+    localStorage.setItem('fb_player_name', name);
+    this.textContent = 'Submitting...';
+    this.disabled = true;
+    const ok = await submitScore(name, score, world, height);
+    if(ok){
+      ov.style.display = 'none';
+      // Show leaderboard after submit
+      document.getElementById('lb-overlay').style.display = 'flex';
+      renderLB(name, score);
+    } else {
+      this.textContent = '⚠ Error — Try again';
+      this.disabled = false;
+    }
+  };
+
+  document.getElementById('fb-skip').onclick = function() {
+    ov.style.display = 'none';
+    if(window.startGame) window.startGame();
+  };
+};
+
+// ── Show leaderboard button ──
+window.showGlobalLB = async function() {
+  document.getElementById('lb-overlay').style.display = 'flex';
+  const saved = localStorage.getItem('fb_player_name') || '';
+  renderLB(saved, 0);
+};
+
+document.getElementById('lb-close').onclick = function() {
+  document.getElementById('lb-overlay').style.display = 'none';
+};
+
+// Close on backdrop click
+document.getElementById('fb-overlay').onclick = function(e) {
+  if(e.target===this){ this.style.display='none'; if(window.startGame)window.startGame(); }
+};
+document.getElementById('lb-overlay').onclick = function(e) {
+  if(e.target===this) this.style.display='none';
+};
+</script>
+
 </body>
 </html>
